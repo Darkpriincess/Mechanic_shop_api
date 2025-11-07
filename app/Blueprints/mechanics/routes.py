@@ -63,7 +63,7 @@ def get_mechanic(id):
 
 @mechanics_bp.route('/<int:id>', methods=['PUT'])
 @cache.cached(timeout=60) #keeps this info close in case of frequent updates
-@token_required
+#@token_required
 def update_mechanic(id):
     mechanic = db.session.get(Mechanic, id)
     if not mechanic:
@@ -80,7 +80,7 @@ def update_mechanic(id):
     return Mechanic_Schema.jsonify(mechanic)
 
 @mechanics_bp.route('/<int:id>', methods=['DELETE'])
-@token_required
+#@token_required
 def delete_mechanic(id):
     mechanic = db.session.get(Mechanic, id)
     if not mechanic:

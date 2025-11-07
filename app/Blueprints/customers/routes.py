@@ -10,11 +10,11 @@ from app.Blueprints.services.schemas import Services_Schema
 @customers_bp.route('/login', methods=['POST'])
 def customer_login():
     try:
-        credentials = login_schema.json(request.json)
+        credentials = login_schema.load(request.json)
         email = credentials['email']
         password = credentials['password']
     except ValidationError as e:
-        return jsonify(e.message), 400
+        return jsonify(e.messages), 400
     
     query = db.select(Customer).where(Customer.email == email)
     customer = db.session.execute(query).scalars().first()
@@ -32,6 +32,7 @@ def customer_login():
         return jsonify({"message": "Invalid email or password"}), 401
     
 @customers_bp.route('/', methods=['POST']) 
+@limiter.limit("3 per minute")
 def create_customer():
     try:
         customer_data = Customer_Schema.load(request.json)
@@ -56,6 +57,7 @@ def get_customers():
     return Customers_Schema.jsonify(all_customers)
 
 @customers_bp.route('/<int:id>', methods=['GET'])
+@cache.cached(timeout=120)#caches in case of frequent reads
 def get_customer(id):
     customer = db.session.get(Customer, id)
     if not customer:
@@ -64,7 +66,7 @@ def get_customer(id):
 
 @customers_bp.route('/<int:id>', methods=['PUT'])
 @cache.cached(timeout=60) #keeps this info close in case of frequent updates
-@token_required
+#@token_required
 def update_customer(id):
     customer = db.session.get(Customer, id)
     if not customer:
@@ -81,8 +83,8 @@ def update_customer(id):
     return Customer_Schema.jsonify(customer)
 
     
-@customers_bp.route('/', methods=['DELETE'])
-@token_required
+@customers_bp.route('/<int:id', methods=['DELETE'])
+#@token_required
 def delete_customer(user_id):
     query = db.select(Customer).where(Customer.id == user_id)
     customer = db.session.execute(query).scalars().first()
@@ -92,7 +94,7 @@ def delete_customer(user_id):
     return jsonify({"message": "customer deleted successfully."})
 
 @customers_bp.route('/my_tickets', methods=['GET'])
-@token_required
+#@token_required
 def get_customer_tickets(user_id):
     query = db.select(Customer).where(Customer.id == user_id)
     customer = db.session.execute(query).scalars().first()
@@ -101,3 +103,4 @@ def get_customer_tickets(user_id):
     
     tickets = customer.services
     return Services_Schema.jsonify(tickets)
+

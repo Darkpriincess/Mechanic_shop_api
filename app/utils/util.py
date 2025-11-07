@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta, timezone
-from jose import jws
+from jose import jwt
 import jose
 from functools import wraps
 from flask import request, jsonify
 
-SECRET_KEY = "a secret key"
+SECRET_KEY = "ayyy yooo"
 
 def encode_token(user_id):
     payload = {
@@ -12,25 +12,28 @@ def encode_token(user_id):
         'iat': datetime.now(timezone.utc),
         "exp": datetime.now(timezone.utc) + timedelta(days=0,hours=1)
     }
-    token = jws.encode(payload, SECRET_KEY, algorithm='HS256')
+    token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
     return token
 
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
-        if 'Authorization' in request.headers:
+        if 'Authorization' in request.headers:#are you even trying? (you need to provide a token)
             token = request.headers['Authorization'].split(" ")[1]
-        if not token:
-            return jsonify({'message': 'Token is missing!'}), 401
-        try:
-            data = jws.decode(token, SECRET_KEY, algorithms=['HS256'])
-            user_id = data['sub']
-        except jose.exceptions.JWTError:
-            return jsonify({'message': 'Token is invalid!'}), 401
-        except jose.exceptions.ExpiredSignatureError:
-            return jsonify({'message': 'Token has expired!'}), 401
+            if not token:
+                return jsonify({'message': 'Token is missing!'}), 401
+            
+            try:
+                data = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+                user_id = data['sub']
+            except jose.exceptions.JWTError:
+                return jsonify({'message': 'Token is invalid!'}), 401
+            except jose.exceptions.ExpiredSignatureError:
+                return jsonify({'message': 'Token has expired!'}), 401
         
-        return f(user_id, *args, **kwargs)
+            return f(user_id, *args, **kwargs)
+        else:
+            return jsonify({'message': 'You must be logged in.'}), 401
     return decorated
         
